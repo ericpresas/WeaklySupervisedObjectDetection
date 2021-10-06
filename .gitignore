@@ -1,0 +1,10 @@
+credencials_imatge.txt
+venv/
+cocoapi-master/
+data/coco/classification/
+data/coco/detection/
+data/coco/support/
+.idea/
+*/__pycache__/*
+resources/
+data/coco/annotations
