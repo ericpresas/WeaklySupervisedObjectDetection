@@ -7,7 +7,7 @@ from datasets import SupportDataset
 from tqdm import tqdm
 device = ("cuda" if torch.cuda.is_available() else "cpu")
 import json
-import pickle
+from utils import utils
 
 
 root_dir = 'data/coco'
@@ -19,9 +19,7 @@ with open(f"{root_dir}/support/categories.json") as f:
     categories_ids = json.load(f)
 
 
-def save_pickle(data, path):
-    with open(f'{path}/support_feature_vector.pickle', 'wb') as handle:
-        pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
 
 
 if __name__ == "__main__":
@@ -63,6 +61,6 @@ if __name__ == "__main__":
         "labels": support_labels
     }
 
-    save_pickle(support_features_data, path='data/coco/support')
+    utils.save_pickle(support_features_data, path='data/coco/support/support_feature_vector.pickle')
 
 

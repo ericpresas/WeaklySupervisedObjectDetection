@@ -1,2 +1,3 @@
 from .ClassificationDataset import ClassificationDataset
 from .SupportDataset import SupportDataset
+from .RegionsDataset import RegionsDataset

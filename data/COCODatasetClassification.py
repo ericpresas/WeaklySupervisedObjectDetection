@@ -1,4 +1,4 @@
-from .COCODatasetBasev2 import COCODatasetBase, MaxValueDatasetReached, MaxImagesDatasetReached
+from .COCODatasetBase import COCODatasetBase, MaxValueDatasetReached, MaxImagesDatasetReached
 import os
 from tqdm import tqdm
 import json

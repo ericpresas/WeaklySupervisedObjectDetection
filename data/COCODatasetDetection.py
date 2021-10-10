@@ -2,7 +2,9 @@ from .COCODatasetBase import COCODatasetBase, MaxValueDatasetReached, MaxImagesD
 import os
 from tqdm import tqdm
 import json
-import random
+from utils import utils
+import cv2 as cv
+import numpy as np
 
 
 class COCODatasetDetection(COCODatasetBase):
@@ -26,6 +28,9 @@ class COCODatasetDetection(COCODatasetBase):
             with open(f"{self.data_path}/{self.extension_path}/saved_images.json") as f:
                 self.images_to_save = json.load(f)
 
+        with open(f"{data_path}/support/used_images.json") as f:
+            self.used_ids = json.load(f)
+
     def save_images(self, split):
 
         # Save categories ids
@@ -42,6 +47,7 @@ class COCODatasetDetection(COCODatasetBase):
             coco = self.coco_test
         for category, imgIds in self.idsImgs.items():
             imgIds = imgIds[split]
+            imgIds = list(filter(lambda x: x not in self.used_ids, imgIds))
             catId = self.coco_train.getCatIds(catNms=category)
             catId = catId[0]
             annotationsIds = coco.getAnnIds(imgIds=imgIds)
@@ -66,10 +72,13 @@ class COCODatasetDetection(COCODatasetBase):
                         annotations_image = list(
                             filter(lambda x: x['image_id'] == img_info['id'], annotationsInfo))
                         path_image = f"{self.data_path}/{self.extension_path}/{split}/{category}/{cont}.jpg"
-                        self.images_to_save[split][category].append({
-                            "path": path_image,
-                            "annotations": [annotation['bbox'] for annotation in annotations_image]
-                        })
+                        edge_boxes = self.fake_annotations(image)
+                        for bbox in edge_boxes:
+                            self.images_to_save[split][category].append({
+                                "path": path_image,
+                                #"annotations": [annotation['bbox'] for annotation in annotations_image],
+                                "fake_annotations": list(bbox)
+                            })
                         self.save_image(path=path_image, image=image)
                         cont += 1
                         pbar.update(1)
@@ -88,5 +97,24 @@ class COCODatasetDetection(COCODatasetBase):
             except MaxValueDatasetReached as e:
                 print(f'Maximum value Reached for {split} {category}')
 
-        with open(f"{self.data_path}/{self.extension_path}/saved_images.json", 'w') as outfile:
-            json.dump(self.images_to_save, outfile, indent=4)
+        utils.save_pickle(self.images_to_save, path=f"{self.data_path}/{self.extension_path}/saved_images.pickle")
+
+    @staticmethod
+    def fake_annotations(im):
+        model = 'resources/model.yml.gz'
+
+        edge_detection = cv.ximgproc.createStructuredEdgeDetection(model)
+        rgb_im = cv.cvtColor(im, cv.COLOR_BGR2RGB)
+        edges = edge_detection.detectEdges(np.float32(rgb_im) / 255.0)
+
+        orimap = edge_detection.computeOrientation(edges)
+        edges = edge_detection.edgesNms(edges, orimap)
+
+        edge_boxes = cv.ximgproc.createEdgeBoxes()
+        edge_boxes.setMaxBoxes(2000)
+        boxes = edge_boxes.getBoundingBoxes(edges, orimap)
+
+        if len(boxes) > 0:
+            return boxes[0]
+        else:
+            return None
