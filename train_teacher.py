@@ -30,7 +30,7 @@ if __name__ == "__main__":
     feature_extractor = FeatureExtractor()
 
     input_size = 224
-    batch_size = 16
+    batch_size = 1
 
     data_transforms = transforms.Compose([
         transforms.Resize((input_size, input_size)),
@@ -51,13 +51,20 @@ if __name__ == "__main__":
     extract_features_loop = tqdm(dataloaders_dict['train'], unit=" batches")  # For printing the progress bar
 
     #image_datasets['train'].__getitem__(5)
+    with torch.no_grad():
+        for data, target in extract_features_loop:
+            print(target.shape)
+            sim_labels = np.empty(shape=(0, num_classes))
 
-    for data, target in extract_features_loop:
-        print(target.shape)
-        sim_labels = np.empty(shape=(0, num_classes))
-        with torch.no_grad():
             for batch_element in data:
-                output = feature_extractor(batch_element)
+                chunked_tensor = torch.chunk(batch_element, 20)
+                output = None
+                for i, chunk in enumerate(chunked_tensor):
+                    if i == 0:
+                        output = feature_extractor(chunk)
+                    else:
+                        features = feature_extractor(chunk)
+                        output = torch.cat((output, features), 0)
                 # print(output.shape)
                 features_batch = output.to('cpu').numpy()
                 labels = target.to('cpu').numpy()
