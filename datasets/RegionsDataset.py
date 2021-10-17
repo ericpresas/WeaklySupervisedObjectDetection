@@ -61,8 +61,8 @@ class RegionsDataset(Dataset):
         for i, annotation in enumerate(image_info['fake_annotations'][:5]):
             x, y, w, h = annotation
             cropped_image = img.crop((x, y, x + w, y + h))
-            plt.imshow(cropped_image)
-            plt.show()
+            #plt.imshow(cropped_image)
+            #plt.show()
 
             if self.transform is not None:
                 cropped_image = self.transform(cropped_image)
