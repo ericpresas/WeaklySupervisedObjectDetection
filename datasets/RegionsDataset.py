@@ -48,7 +48,7 @@ class RegionsDataset(Dataset):
         self.transform = transform
 
         random.shuffle(self.images_info)
-        self.feature_extractor = FeatureExtractor()
+        #self.feature_extractor = FeatureExtractor()
 
     def __len__(self):
         return len(self.images_info)
@@ -58,9 +58,11 @@ class RegionsDataset(Dataset):
         img = Image.open(image_info['path']).convert("RGB")
         cropped_images = []
 
-        for i, annotation in enumerate(image_info['fake_annotations']):
+        for i, annotation in enumerate(image_info['fake_annotations'][:5]):
             x, y, w, h = annotation
             cropped_image = img.crop((x, y, x + w, y + h))
+            plt.imshow(cropped_image)
+            plt.show()
 
             if self.transform is not None:
                 cropped_image = self.transform(cropped_image)

@@ -45,7 +45,7 @@ if __name__ == "__main__":
     }
 
     dataloaders_dict = {
-        x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, shuffle=False, num_workers=4) for x in
+        x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, shuffle=False, num_workers=0) for x in
         ['train', 'val']}
 
     extract_features_loop = tqdm(dataloaders_dict['train'], unit=" batches")  # For printing the progress bar
@@ -57,19 +57,21 @@ if __name__ == "__main__":
             sim_labels = np.empty(shape=(0, num_classes))
 
             for batch_element in data:
-                chunked_tensor = torch.chunk(batch_element, 20)
+                output = feature_extractor(batch_element)
+                """chunked_tensor = torch.chunk(batch_element, 1)
                 output = None
                 for i, chunk in enumerate(chunked_tensor):
                     if i == 0:
                         output = feature_extractor(chunk)
                     else:
                         features = feature_extractor(chunk)
-                        output = torch.cat((output, features), 0)
+                        output = torch.cat((output, features), 0)"""
                 # print(output.shape)
                 features_batch = output.to('cpu').numpy()
                 labels = target.to('cpu').numpy()
 
                 #print(features_batch.shape)
+                #sim_labels = torch.nn.CosineSimilarity(output, )
 
                 for feature in features_batch:
                     cos_sim_classes = np.zeros((1, num_classes))
@@ -84,6 +86,8 @@ if __name__ == "__main__":
                 s_det = sim_labels / np.sum(sim_labels, axis=0).reshape(-1, 1).T
 
                 pseudo_labels = np.sum(np.multiply(s_class, s_det), axis=0)
+
+                #http://www.kasimte.com/2020/02/14/how-does-temperature-affect-softmax-in-machine-learning.html
 
                 print(pseudo_labels)
             print()

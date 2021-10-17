@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch
 import torchvision.models as models
+
 #https://becominghuman.ai/extract-a-feature-vector-for-any-image-with-pytorch-9717561d1d4c
 
 
@@ -15,6 +16,17 @@ class FeatureExtractor(nn.Module):
         self.model.fc = nn.Sequential()
 
     def forward(self, x):
-        x = self.model(x)
-        return x
+        x = self.model.conv1(x)
+        x = self.model.bn1(x)
+        x = self.model.relu(x)
+        x = self.model.maxpool(x)
 
+        x = self.model.layer1(x)
+        x = self.model.layer2(x)
+        x = self.model.layer3(x)
+        x = self.model.layer4(x)
+
+        # erase layers you want
+        x = self.model.avgpool(x)
+        x = torch.flatten(x, 1)
+        return x
