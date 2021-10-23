@@ -72,8 +72,11 @@ class RegionsDataset(Dataset):
             else:
                 cropped_images = torch.cat((cropped_images, cropped_image.unsqueeze_(0)), 0)
 
+        if self.transform is not None:
+            img = self.transform(img)
+
         y_label = torch.zeros(self.num_classes, dtype=torch.float).scatter_(0, torch.tensor(image_info['category_idx']), value=1)
 
-        return cropped_images, y_label
+        return img, cropped_images, y_label
 
 

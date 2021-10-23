@@ -25,6 +25,7 @@ support_feature_vector = utils.load_pickle(f"{root_dir}/support/support_feature_
 
 def extract_similarity_labels(feature_extractor, data):
     batch_logits = np.empty(shape=(0, num_classes))
+    batch_pseudo_labels = []
 
     sim_labels = np.empty(shape=(0, num_classes))
 
@@ -53,17 +54,22 @@ def extract_similarity_labels(feature_extractor, data):
         s_class = sim_labels / np.sum(sim_labels, axis=1).reshape(-1, 1)
         s_det = sim_labels / np.sum(sim_labels, axis=0).reshape(-1, 1).T
 
-        pseudo_labels = np.sum(np.multiply(s_class, s_det), axis=0)
+        pseudo_logits = np.sum(np.multiply(s_class, s_det), axis=0)
+        pseudo_label = np.argmax(pseudo_logits)
+        batch_pseudo_labels.append(pseudo_label)
 
-        batch_logits = np.concatenate((batch_logits, np.expand_dims(pseudo_labels, axis=0)), axis=0)
+        batch_logits = np.concatenate((batch_logits, np.expand_dims(pseudo_logits, axis=0)), axis=0)
 
         # http://www.kasimte.com/2020/02/14/how-does-temperature-affect-softmax-in-machine-learning.html
 
     batch_logits = torch.from_numpy(batch_logits)
+    batch_pseudo_labels = utils.convertToOneHot(np.array(batch_pseudo_labels), num_classes=num_classes)
 
-    batch_logits.float().to(device)
+    #batch_logits.float().to(device)
+    batch_pseudo_labels = torch.from_numpy(batch_pseudo_labels)
+    batch_pseudo_labels.float().to(device)
 
-    return batch_logits
+    return batch_pseudo_labels
 
 def train_model(model, feature_extractor, optimizer, loss_fn, train_loader, val_loader, epochs):
     train_accuracies, train_losses, val_accuracies, val_losses = [], [], [], []
@@ -76,23 +82,23 @@ def train_model(model, feature_extractor, optimizer, loss_fn, train_loader, val_
         model.train()
         train_loss.reset()
         train_accuracy.reset()
-        train_loop = tqdm(train_loader, unit=" batches")  # For printing the progress bar
-        for data, target in train_loop:
+        train_loop = tqdm(train_loader, unit=" batches", bar_format="{l_bar}{bar:10}{r_bar}{bar:-10b}")  # For printing the progress bar
+        for data, data_regions, target in train_loop:
             train_loop.set_description('[TRAIN] Epoch {}/{}'.format(epoch + 1, epochs))
-            data, target = data.float().to(device), target.float().to(device)
-            data_logits = extract_similarity_labels(feature_extractor, data)
-            print(data_logits.shape)
+            data, data_regions, target = data.float().to(device), data_regions.float().to(device), target.float().to(device)
+            pseudo_labels = extract_similarity_labels(feature_extractor, data_regions)
 
+            features = feature_extractor(data)
             optimizer.zero_grad()
-            output = model(data)
-            loss = loss_fn(output, data_logits)
+            output = model(features)
+            loss = loss_fn(output, pseudo_labels)
             loss.backward()
             optimizer.step()
 
-            train_loss.update(loss.item(), n=len(data_logits))
+            train_loss.update(loss.item(), n=len(pseudo_labels))
             pred = output.round()  # get the prediction
-            acc = pred.eq(target.view_as(pred)).sum().item() / len(data_logits)
-            train_accuracy.update(acc, n=len(data_logits))
+            acc = pred.eq(target.view_as(pred)).sum().item() / len(pseudo_labels)
+            train_accuracy.update(acc, n=len(pseudo_labels))
             train_loop.set_postfix(loss=train_loss.avg, accuracy=train_accuracy.avg)
 
 if __name__ == "__main__":
@@ -123,7 +129,7 @@ if __name__ == "__main__":
         ['train', 'val']}
 
     optimizer = optim.Adam(teacher_model.parameters(), lr=1e-3)
-    loss_fn = nn.BCELoss()
+    loss_fn = nn.BCEWithLogitsLoss()
 
     epochs = 30
 

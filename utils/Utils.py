@@ -35,6 +35,37 @@ class Utils:
         cos_sim = np.max(cos_sim_instances)
         return cos_sim
 
+    @staticmethod
+    def convertToOneHot(vector, num_classes=None):
+        """
+        Converts an input 1-D vector of integers into an output
+        2-D array of one-hot vectors, where an i'th input value
+        of j will set a '1' in the i'th row, j'th column of the
+        output array.
+
+        Example:
+            v = np.array((1, 0, 4))
+            one_hot_v = convertToOneHot(v)
+            print one_hot_v
+
+            [[0 1 0 0 0]
+             [1 0 0 0 0]
+             [0 0 0 0 1]]
+        """
+
+        assert isinstance(vector, np.ndarray)
+        assert len(vector) > 0
+
+        if num_classes is None:
+            num_classes = np.max(vector) + 1
+        else:
+            assert num_classes > 0
+            assert num_classes >= np.max(vector)
+
+        result = np.zeros(shape=(len(vector), num_classes), dtype=np.float32)
+        result[np.arange(len(vector)), vector] = np.float32(1.0)
+        return result
+
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
