@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 from models import Teacher, FeatureExtractor
@@ -11,6 +10,8 @@ device = ("cuda" if torch.cuda.is_available() else "cpu")
 import json
 from utils import utils, AverageMeter
 import numpy as np
+
+print(f"Using {device}...")
 
 root_dir = 'data/coco'
 
@@ -84,7 +85,7 @@ def train_model(model, feature_extractor, optimizer, loss_fn, train_loader, val_
         train_accuracy.reset()
         train_loop = tqdm(train_loader, unit=" batches", bar_format="{l_bar}{bar:10}{r_bar}{bar:-10b}")  # For printing the progress bar
         for data, data_regions, target in train_loop:
-            train_loop.set_description('[TRAIN] Epoch {}/{}'.format(epoch + 1, epochs))
+            train_loop.set_description(f'[TRAIN] Epoch {epoch + 1}/{epochs}')
             data, data_regions, target = data.float().to(device), data_regions.float().to(device), target.float().to(device)
             pseudo_labels = extract_similarity_labels(feature_extractor, data_regions)
 
@@ -97,9 +98,39 @@ def train_model(model, feature_extractor, optimizer, loss_fn, train_loader, val_
 
             train_loss.update(loss.item(), n=len(pseudo_labels))
             pred = output.round()  # get the prediction
-            acc = pred.eq(target.view_as(pred)).sum().item() / len(pseudo_labels)
+            acc = pred.eq(pseudo_labels.view_as(pred)).sum().item() / len(pseudo_labels)
             train_accuracy.update(acc, n=len(pseudo_labels))
             train_loop.set_postfix(loss=train_loss.avg, accuracy=train_accuracy.avg)
+
+        train_losses.append(train_loss.avg)
+        train_accuracies.append(train_accuracy.avg)
+
+        # validation
+        model.eval()
+        val_loss.reset()
+        val_accuracy.reset()
+        val_loop = tqdm(val_loader, unit=" batches", bar_format="{l_bar}{bar:10}{r_bar}{bar:-10b}")  # For printing the progress bar
+        with torch.no_grad():
+            for data, data_regions, target in val_loop:
+                val_loop.set_description(f'[VAL] Epoch {epoch + 1}/{epochs}')
+                data, data_regions, target = data.float().to(device), data_regions.float().to(
+                    device), target.float().to(device)
+                pseudo_labels = extract_similarity_labels(feature_extractor, data_regions)
+
+                features = feature_extractor(data)
+                output = model(features)
+                loss = loss_fn(output, pseudo_labels)
+
+                val_loss.update(loss.item(), n=len(target))
+                pred = output.round()  # get the prediction
+                acc = pred.eq(pseudo_labels.view_as(pred)).sum().item() / len(pseudo_labels)
+                val_accuracy.update(acc, n=len(pseudo_labels))
+                val_loop.set_postfix(loss=val_loss.avg, accuracy=val_accuracy.avg)
+
+        val_losses.append(val_loss.avg)
+        val_accuracies.append(val_accuracy.avg)
+
+    return train_accuracies, train_losses, val_accuracies, val_losses
 
 if __name__ == "__main__":
 
@@ -125,7 +156,7 @@ if __name__ == "__main__":
     }
 
     dataloaders_dict = {
-        x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, shuffle=False, num_workers=0) for x in
+        x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, shuffle=True, num_workers=0) for x in
         ['train', 'val']}
 
     optimizer = optim.Adam(teacher_model.parameters(), lr=1e-3)
@@ -133,8 +164,8 @@ if __name__ == "__main__":
 
     epochs = 30
 
-    train_model(teacher_model, feature_extractor, optimizer, loss_fn, dataloaders_dict['train'], dataloaders_dict['val'], epochs)
-
+    output_train = train_model(teacher_model, feature_extractor, optimizer, loss_fn, dataloaders_dict['train'], dataloaders_dict['val'], epochs)
+    train_accuracies, train_losses, val_accuracies, val_losses = output_train
 
 
 
