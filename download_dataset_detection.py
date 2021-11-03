@@ -15,7 +15,7 @@ if __name__ == "__main__":
         data_train_id='train2017',
         data_val_id='val2017',
         categories=categories,
-        max_samples_category=80
+        max_samples_category=1000
     )
 
     #category_names = coco_dataset.list_category_names()

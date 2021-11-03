@@ -35,13 +35,9 @@ class RegionsDataset(Dataset):
                         "category_idx": categories_ids[category]
                     })
             else:
-                for key, group in itertools.groupby(content, lambda x: x['path']):
-                    group = list(group)
-                    self.images_info.append({
-                        "path": group[0]['path'],
-                        "fake_annotations": [element['fake_annotations'] for element in group],
-                        "category_idx": categories_ids[category]
-                    })
+                for image_obj in content:
+                    image_obj['category_idx'] = categories_ids[category]
+                    self.images_info.append(image_obj)
 
         self.num_classes = len(self.categories)
 
@@ -58,7 +54,7 @@ class RegionsDataset(Dataset):
         img = Image.open(image_info['path']).convert("RGB")
         cropped_images = []
 
-        for i, annotation in enumerate(image_info['fake_annotations'][:5]):
+        for i, annotation in enumerate(image_info['fake_annotations'][:200]):
             x, y, w, h = annotation
             cropped_image = img.crop((x, y, x + w, y + h))
             #plt.imshow(cropped_image)
@@ -77,6 +73,6 @@ class RegionsDataset(Dataset):
 
         y_label = torch.zeros(self.num_classes, dtype=torch.float).scatter_(0, torch.tensor(image_info['category_idx']), value=1)
 
-        return img, cropped_images, y_label
+        return img, cropped_images, y_label, image_info
 
 

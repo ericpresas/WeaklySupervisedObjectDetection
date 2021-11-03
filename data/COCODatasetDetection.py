@@ -5,6 +5,8 @@ import json
 from utils import utils
 import cv2 as cv
 import numpy as np
+from PIL import Image
+#https://cv.gluon.ai/build/examples_datasets/pascal_voc.html
 
 
 class COCODatasetDetection(COCODatasetBase):
@@ -56,9 +58,9 @@ class COCODatasetDetection(COCODatasetBase):
 
             annotationsInfo = list(filter(lambda x: x['category_id'] == catId, annotationsInfo))
 
-            directory_exists = os.path.exists(f"{self.data_path}/{self.extension_path}/{split}/{category}")
+            """directory_exists = os.path.exists(f"{self.data_path}/{self.extension_path}/{split}/{category}")
             if not directory_exists:
-                os.mkdir(f"{self.data_path}/{self.extension_path}/{split}/{category}")
+                os.mkdir(f"{self.data_path}/{self.extension_path}/{split}/{category}")"""
 
             cont = 0
             self.images_to_save[split][category] = []
@@ -71,15 +73,19 @@ class COCODatasetDetection(COCODatasetBase):
                     if image is not None:
                         annotations_image = list(
                             filter(lambda x: x['image_id'] == img_info['id'], annotationsInfo))
-                        path_image = f"{self.data_path}/{self.extension_path}/{split}/{category}/{cont}.jpg"
+                        path_image = f"{self.data_path}/{self.extension_path}/{split}/{img_info['file_name']}"
                         edge_boxes = self.fake_annotations(image)
-                        for bbox in edge_boxes:
-                            self.images_to_save[split][category].append({
-                                "path": path_image,
-                                #"annotations": [annotation['bbox'] for annotation in annotations_image],
-                                "fake_annotations": list(bbox)
-                            })
-                        self.save_image(path=path_image, image=image)
+                        PIL_img = Image.fromarray(image)
+                        PIL_img.save(path_image)
+
+                        self.images_to_save[split][category].append({
+                            "path": path_image,
+                            "filename": img_info['file_name'],
+                            "id": img_info['id'],
+                            #"annotations": [annotation['bbox'] for annotation in annotations_image],
+                            "fake_annotations": [list(bbox) for bbox in edge_boxes]
+                        })
+
                         cont += 1
                         pbar.update(1)
                         if cont == self.num_images[split]:
