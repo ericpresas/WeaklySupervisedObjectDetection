@@ -11,23 +11,13 @@ from utils import utils
 
 
 root_dir = 'data/coco'
-with open(f"{root_dir}/support/saved_images.json") as f:
-    images_info = json.load(f)
 
-
-with open(f"{root_dir}/support/categories.json") as f:
-    categories_ids = json.load(f)
-
-
-
+images_info = utils.load_pickle(f"{root_dir}/annotations/support_boxes.pkl")
 
 
 if __name__ == "__main__":
     feature_extractor = FeatureExtractor()
-
-    #feature_extractor.to(device)
-
-    #feature_extractor.eval()
+    feature_extractor.to(device)
 
     input_size = 224
     batch_size = 16
@@ -39,7 +29,9 @@ if __name__ == "__main__":
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
 
-    support_dataset = SupportDataset(dataset_images_info=images_info, categories_ids=categories_ids, root_dir=root_dir, transform=data_transforms)
+    print(f"Using {device}")
+
+    support_dataset = SupportDataset(dataset_images_info=images_info, root_dir=root_dir, transform=data_transforms)
 
     support_dataloader = torch.utils.data.DataLoader(support_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
 
@@ -49,6 +41,7 @@ if __name__ == "__main__":
     support_labels = np.empty(shape=0)
     with torch.no_grad():
         for data, target in extract_features_loop:
+            data = data.float().to(device)
             output = feature_extractor(data)
             #print(output.shape)
             features = output.to('cpu').numpy()
@@ -61,6 +54,6 @@ if __name__ == "__main__":
         "labels": support_labels
     }
 
-    utils.save_pickle(support_features_data, path='data/coco/support/support_feature_vector.pickle')
+    utils.save_pickle(support_features_data, path=f"{root_dir}/annotations/support_feature_vector.pkl")
 
 

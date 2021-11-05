@@ -15,14 +15,17 @@ print(f"Using {device}...")
 
 root_dir = 'data/coco'
 
-images_info = utils.load_pickle(f"{root_dir}/detection/saved_images.pickle")
+print("Loading Edge Boxes...")
+images_info_train = utils.load_pickle(f"{root_dir}/annotations/edge_boxes_val.pkl")
+images_info_val = utils.load_pickle(f"{root_dir}/annotations/edge_boxes_val.pkl")
 
-with open(f"{root_dir}/support/categories.json") as f:
-    categories_ids = json.load(f)
+categories_ids = utils.load_pickle(f"{root_dir}/annotations/categories.pkl")
 
-num_classes = len(categories_ids.keys())
+num_classes = len(categories_ids)
 
-support_feature_vector = utils.load_pickle(f"{root_dir}/support/support_feature_vector.pickle")
+print("Loading Support Vector....")
+
+support_feature_vector = utils.load_pickle(f"{root_dir}/annotations/support_feature_vector.pkl")
 
 
 def extract_similarity_labels(feature_extractor, data):
@@ -46,9 +49,10 @@ def extract_similarity_labels(feature_extractor, data):
 
         for feature in features_batch:
             cos_sim_classes = np.zeros((1, num_classes))
-            for categoy_name, id_category in categories_ids.items():
+            for i, category_obj in enumerate(categories_ids):
+                categoy_name, id_category = category_obj['name'], category_obj['id']
                 feature_class_vector = utils.get_feature_vector_class(support_feature_vector, id_category)
-                cos_sim_classes[0, id_category] = utils.compute_class_cosine_similarity(feature, feature_class_vector)
+                cos_sim_classes[0, i] = utils.compute_class_cosine_similarity(feature, feature_class_vector)
 
             sim_labels = np.concatenate((sim_labels, cos_sim_classes), axis=0)
 
@@ -65,28 +69,35 @@ def extract_similarity_labels(feature_extractor, data):
         # http://www.kasimte.com/2020/02/14/how-does-temperature-affect-softmax-in-machine-learning.html
 
     batch_logits = torch.from_numpy(batch_logits)
-    batch_pseudo_labels = utils.convertToOneHot(np.array(batch_pseudo_labels), num_classes=num_classes)
+    batch_pseudo_labels_oneHot = utils.convertToOneHot(np.array(batch_pseudo_labels), num_classes=num_classes)
 
     #batch_logits.float().to(device)
     #batch_pseudo_labels = torch.from_numpy(batch_pseudo_labels)
     #batch_pseudo_labels = batch_pseudo_labels.float().to(device)
 
-    return batch_pseudo_labels
+    return batch_pseudo_labels_oneHot, batch_pseudo_labels
 
 
 def process(feature_extractor, loader, stage):
     pseudo_labels = []
     loop = tqdm(loader, unit=" batches", bar_format="{l_bar}{bar:10}{r_bar}{bar:-10b}")  # For printing the progress bar
     loop.set_description(f'[{stage}] Extracting similarity labels')
-    for data, data_regions, target, image_info in loop:
-        data, data_regions, target = data.float().to(device), data_regions.float().to(device), target.float().to(device)
-        pseudo_label = extract_similarity_labels(feature_extractor, data_regions)
+    for data_regions, image_info in loop:
+        data_regions = data_regions.float().to(device)
+        pseudo_label_oneHot, pseudo_label = extract_similarity_labels(feature_extractor, data_regions)
         pseudo_labels.append({
-            "id": image_info['id'],
-            "pseudo_label": pseudo_label
+            "pseudo_label": pseudo_label_oneHot,
+            **image_info
         })
+        id_category = image_info['category_id'].numpy()
+        print('\n')
+        print(f"Label: {id_category[0]} {image_info['category_name'][0]} - Pseudo: {pseudo_label[0]}")
+        if int(pseudo_label[0]) == int(id_category[0]):
+            print("Match!!")
+        else:
+            print("No Match...")
 
-    return pseudo_labels
+    utils.save_pickle(f"{root_dir}/annotations/pseudo_labels_{stage}.pkl")
 
 
 if __name__ == "__main__":
@@ -95,7 +106,7 @@ if __name__ == "__main__":
     feature_extractor.to(device)
 
     input_size = 224
-    batch_size = 32
+    batch_size = 1
 
     data_transforms = transforms.Compose([
         transforms.Resize((input_size, input_size)),
@@ -105,15 +116,17 @@ if __name__ == "__main__":
     ])
 
     image_datasets = {
-        "train": RegionsDataset(dataset_images_info=images_info, categories_ids=categories_ids, root_dir=root_dir, type='train', level='image', transform=data_transforms),
-        "val": RegionsDataset(dataset_images_info=images_info, categories_ids=categories_ids, root_dir=root_dir, type='val', level='image', transform=data_transforms)
+        "train": RegionsDataset(dataset_images_info=images_info_train, categories_ids=categories_ids, root_dir=root_dir, transform=data_transforms),
+        "val": RegionsDataset(dataset_images_info=images_info_val, categories_ids=categories_ids, root_dir=root_dir, transform=data_transforms)
     }
 
     dataloaders_dict = {
         x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, shuffle=True, num_workers=0) for x in
         ['train', 'val']}
 
+    print("Start train Pseudo Labels extractor...")
     process(feature_extractor, dataloaders_dict['train'], 'TRAIN')
+    print("Start val Pseudo Labels extractor...")
     process(feature_extractor, dataloaders_dict['val'], 'VAL')
 
 

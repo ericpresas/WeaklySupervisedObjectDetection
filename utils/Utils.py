@@ -31,8 +31,8 @@ class Utils:
     @staticmethod
     def compute_class_cosine_similarity(features, class_features):
         cos_sim_instances = cosine_similarity(features.reshape(1, -1), class_features)
-        #cos_sim = np.sum(cos_sim_instances)/cos_sim_instances.shape[1]
-        cos_sim = np.max(cos_sim_instances)
+        cos_sim = np.sum(cos_sim_instances)/cos_sim_instances.shape[1]
+        #cos_sim = np.max(cos_sim_instances)
         return cos_sim
 
     @staticmethod

@@ -1,3 +1,2 @@
-from .COCODatasetClassification import COCODatasetClassification
-from .COCODatasetDetection import COCODatasetDetection
-from .COCOSupportSet import COCOSupportSet
+from .GenerateEdgeBoxes import GenerateEdgeBoxes
+from .SupportSet import SupportSet

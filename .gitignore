@@ -8,3 +8,5 @@ data/coco/support/
 */__pycache__/*
 resources/
 data/coco/annotations
+*/download_coco.sh
+data/VOC

@@ -24,6 +24,7 @@ num_classes = len(categories_ids.keys())
 
 support_feature_vector = utils.load_pickle(f"{root_dir}/support/support_feature_vector.pickle")
 
+
 def extract_similarity_labels(feature_extractor, data):
     batch_logits = np.empty(shape=(0, num_classes))
     batch_pseudo_labels = []
@@ -68,9 +69,10 @@ def extract_similarity_labels(feature_extractor, data):
 
     #batch_logits.float().to(device)
     batch_pseudo_labels = torch.from_numpy(batch_pseudo_labels)
-    batch_pseudo_labels.float().to(device)
+    batch_pseudo_labels = batch_pseudo_labels.float().to(device)
 
     return batch_pseudo_labels
+
 
 def train_model(model, feature_extractor, optimizer, loss_fn, train_loader, val_loader, epochs):
     train_accuracies, train_losses, val_accuracies, val_losses = [], [], [], []
@@ -90,6 +92,7 @@ def train_model(model, feature_extractor, optimizer, loss_fn, train_loader, val_
             pseudo_labels = extract_similarity_labels(feature_extractor, data_regions)
 
             features = feature_extractor(data)
+            features = features.float().to(device)
             optimizer.zero_grad()
             output = model(features)
             loss = loss_fn(output, pseudo_labels)
@@ -132,6 +135,7 @@ def train_model(model, feature_extractor, optimizer, loss_fn, train_loader, val_
 
     return train_accuracies, train_losses, val_accuracies, val_losses
 
+
 if __name__ == "__main__":
 
     feature_extractor = FeatureExtractor()
@@ -141,7 +145,7 @@ if __name__ == "__main__":
     teacher_model.to(device)
 
     input_size = 224
-    batch_size = 2
+    batch_size = 32
 
     data_transforms = transforms.Compose([
         transforms.Resize((input_size, input_size)),

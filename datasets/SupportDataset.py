@@ -15,19 +15,10 @@ warnings.filterwarnings("ignore")
 
 
 class SupportDataset(Dataset):
-    def __init__(self, dataset_images_info, categories_ids, root_dir, transform=None):
+    def __init__(self, dataset_images_info, root_dir, transform=None):
         self.images_info = []
         self.root_dir = root_dir
-        self.categories = []
-        for category, content in dataset_images_info.items():
-            self.categories.append(category)
-            for image_path in content:
-                self.images_info.append({
-                    "path": image_path,
-                    "category_idx": categories_ids[category]
-                })
-
-        self.num_classes = len(self.categories)
+        self.images_info = dataset_images_info
 
         self.transform = transform
 
@@ -38,11 +29,18 @@ class SupportDataset(Dataset):
         image_info = self.images_info[idx]
         img = Image.open(image_info['path']).convert("RGB")
 
+        x, y, w, h = image_info['box']
+        cropped_image = img.crop((x, y, x + w, y + h))
+
+        """plt.imshow(cropped_image)
+        plt.title(image_info['category_name'])
+        plt.show()"""
+
         if self.transform is not None:
-            img = self.transform(img)
+            cropped_image = self.transform(cropped_image)
 
-        y_label = image_info['category_idx']
+        y_label = image_info['category_id']
 
-        return img, y_label
+        return cropped_image, y_label
 
 
