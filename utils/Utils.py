@@ -2,6 +2,9 @@ from matplotlib import pyplot as plt
 import pickle
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
+from torch import nn
+import math
+import torch
 
 
 class Utils:
@@ -29,11 +32,69 @@ class Utils:
         return feature_vector
 
     @staticmethod
+    def get_values_vector_class(values, labels, idx):
+        positions_class = labels == idx
+        feature_vector = values[positions_class]
+        return feature_vector
+
+    @staticmethod
+    def logitsFrom(probabilities):
+        return [math.log(x) for x in probabilities]
+
+    @staticmethod
+    def softmax(logits):
+        bottom = sum([math.exp(x) for x in logits])
+        softmax = [math.exp(x) / bottom for x in logits]
+        return softmax
+
+    @staticmethod
     def compute_class_cosine_similarity(features, class_features):
+        """cos_sim_instances_2 = []
+        for image_class_features in class_features:
+            cos_sim = dot(features, image_class_features) / (norm(features) * norm(image_class_features))
+            cos_sim_instances_2.append(cos_sim)"""
+
+        #cos_sim_instances_2 = list(np.stack(cos_sim_instances_2))
         cos_sim_instances = cosine_similarity(features.reshape(1, -1), class_features)
         cos_sim = np.sum(cos_sim_instances)/cos_sim_instances.shape[1]
+        #cos_sim_v2 = max(cos_sim_instances_2)
         #cos_sim = np.max(cos_sim_instances)
         return cos_sim
+
+    @staticmethod
+    def compute_cosine_sim_tensors(features, support_features):
+        cosine_similarity = nn.CosineSimilarity(dim=1, eps=1e-6)
+        cos_sim_instances = cosine_similarity(torch.unsqueeze(features, dim=0), support_features)
+        return cos_sim_instances
+
+    @staticmethod
+    def compute_class_cosine_similarity_tensors(features, class_features):
+
+        cosine_similarity = nn.CosineSimilarity(dim=1, eps=1e-6)
+        cos_sim_instances = cosine_similarity(torch.unsqueeze(features, dim=0), class_features)
+        cos_sim = torch.sum(cos_sim_instances) / cos_sim_instances.shape[0]
+        return cos_sim
+
+    @staticmethod
+    def compute_softmax_torch(logits):
+        def compute_softmax(sim_labels, axis=0):
+            softmax = []
+            for i in range(sim_labels.shape[axis]):
+                if axis == 1:
+                    vector = sim_labels[:, i]
+                else:
+                    vector = sim_labels[i, :]
+                logits = utils.logitsFrom(vector)
+                low_temp = 0.5
+                logits_low_temp = [x / low_temp for x in logits]
+
+                softmax.append(np.array(utils.softmax(logits_low_temp)))
+
+            if axis == 1:
+                return np.transpose(np.stack(softmax))
+            else:
+                return np.stack(softmax)
+
 
     @staticmethod
     def convertToOneHot(vector, num_classes=None):

@@ -8,15 +8,15 @@ import torchvision.models as models
 class FeatureExtractor(nn.Module):
     def __init__(self):
         super(FeatureExtractor, self).__init__()
-        self.model = models.resnet152(pretrained=True)
+        self.model = models.resnet152(pretrained=True).eval()
 
         for param in self.model.parameters():
             param.requires_grad = False
 
-        self.model.fc = nn.Sequential()
+        self.model.fc = nn.Flatten()
 
     def forward(self, x):
-        x = self.model.conv1(x)
+        """x = self.model.conv1(x)
         x = self.model.bn1(x)
         x = self.model.relu(x)
         x = self.model.maxpool(x)
@@ -28,5 +28,6 @@ class FeatureExtractor(nn.Module):
 
         # erase layers you want
         x = self.model.avgpool(x)
-        x = torch.flatten(x, 1)
+        x = torch.flatten(x, 1)"""
+        x = self.model(x)
         return x

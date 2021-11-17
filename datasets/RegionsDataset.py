@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 # Ignore warnings
 import warnings
 warnings.filterwarnings("ignore")
+import time
+import numpy as np
 
 
 class RegionsDataset(Dataset):
@@ -27,10 +29,15 @@ class RegionsDataset(Dataset):
     def __getitem__(self, idx):
         image_info = self.images_info[idx]
         img = Image.open(image_info['path']).convert("RGB")
+
+        #plt.imshow(img)
+        #plt.show()
         cropped_images = []
 
         for i, annotation in enumerate(image_info['edge_boxes'][:500]):
+
             x, y, w, h = annotation
+            #cropped_image = img[y:y+h, x:x+w]
             cropped_image = img.crop((x, y, x + w, y + h))
             #plt.imshow(cropped_image)
             #plt.show()
@@ -38,13 +45,11 @@ class RegionsDataset(Dataset):
             if self.transform is not None:
                 cropped_image = self.transform(cropped_image)
 
-            if i == 0:
-                cropped_images = cropped_image.unsqueeze_(0)
-            else:
-                cropped_images = torch.cat((cropped_images, cropped_image.unsqueeze_(0)), 0)
+            cropped_images.append(cropped_image)
 
-        """if self.transform is not None:
-            img = self.transform(img)"""
+        cropped_images = torch.stack(cropped_images)
+        #end = time.time()
+        #print(f"Time: {end - start}")
 
         #y_label = torch.zeros(self.num_classes, dtype=torch.float).scatter_(0, torch.tensor(image_info['category_id'] - 1), value=1)
 

@@ -1,0 +1,16 @@
+DATABASE:
+  IMAGES: /mnt/gpid08/datasets/coco-2017/coco/images
+  ANNOTATIONS: /mnt/gpid07/imatge/eric.presas/WeaklySupervisedObjectDetection/data/coco/annotations
+EDGE_BOX_MODEL: /mnt/gpid07/imatge/eric.presas/WeaklySupervisedObjectDetection/resources/model.yml.gz
+DATASETS:
+  TRAIN:
+    IMAGES: train2017
+    ANNOTATIONS: instances_train2017.json
+    EDGE_BOXES: edge_boxes_train.pkl
+  VAL:
+    IMAGES: val2017
+    ANNOTATIONS: instances_val2017.json
+    EDGE_BOXES: edge_boxes_val.pkl
+  SUPPORT:
+    EDGE_BOXES: support_boxes.pkl
+    FEATURE_VECTOR: support_feature_vector.pkl
