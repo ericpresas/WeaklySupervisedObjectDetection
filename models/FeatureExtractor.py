@@ -8,7 +8,7 @@ import torchvision.models as models
 class FeatureExtractor(nn.Module):
     def __init__(self):
         super(FeatureExtractor, self).__init__()
-        self.model = models.resnet152(pretrained=True).eval()
+        self.model = models.resnet152(pretrained=True)
 
         for param in self.model.parameters():
             param.requires_grad = False

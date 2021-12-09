@@ -76,27 +76,6 @@ class Utils:
         return cos_sim
 
     @staticmethod
-    def compute_softmax_torch(logits):
-        def compute_softmax(sim_labels, axis=0):
-            softmax = []
-            for i in range(sim_labels.shape[axis]):
-                if axis == 1:
-                    vector = sim_labels[:, i]
-                else:
-                    vector = sim_labels[i, :]
-                logits = utils.logitsFrom(vector)
-                low_temp = 0.5
-                logits_low_temp = [x / low_temp for x in logits]
-
-                softmax.append(np.array(utils.softmax(logits_low_temp)))
-
-            if axis == 1:
-                return np.transpose(np.stack(softmax))
-            else:
-                return np.stack(softmax)
-
-
-    @staticmethod
     def convertToOneHot(vector, num_classes=None):
         """
         Converts an input 1-D vector of integers into an output
@@ -126,6 +105,14 @@ class Utils:
         result = np.zeros(shape=(len(vector), num_classes), dtype=np.float32)
         result[np.arange(len(vector)), vector] = np.float32(1.0)
         return result
+
+    @staticmethod
+    def filter_boxes(boxes, min_size, max_size):
+        """Keep boxes with width and height both greater than min_size."""
+        w = boxes[:, 2] + 1
+        h = boxes[:, 3] + 1
+        keep = np.where((w > min_size) & (h > min_size) & (w < max_size) & (h < max_size))[0]
+        return boxes[keep]
 
 
 class AverageMeter(object):

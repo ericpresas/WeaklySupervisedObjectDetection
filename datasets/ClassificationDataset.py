@@ -35,10 +35,10 @@ class ClassificationDataset(Dataset):
         if 'box' in image_info:
             x, y, w, h = image_info['box']
             img = img.crop((x, y, x + w, y + h))
-            # TODO:
-            y_label = image_info['category_id']
+            index = next((i for i, item in enumerate(self.categories) if item['id'] == image_info['category_id']), -1)
+            y_label = torch.zeros(self.num_classes, dtype=torch.float).scatter_(0, torch.tensor(index), value=1)
         else:
-            y_label = torch.from_numpy(image_info['pseudo_label'])
+            y_label = torch.squeeze(torch.from_numpy(image_info['pseudo_label']), dim=0)
 
         if self.transform is not None:
             img = self.transform(img)

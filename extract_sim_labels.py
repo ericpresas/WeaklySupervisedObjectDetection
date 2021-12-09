@@ -74,7 +74,7 @@ def compute_softmax_torch(sim_labels, axis=0):
         else:
             vector = sim_labels[i, :]
         logits = torch.special.logit(vector)
-        low_temp = 0.5
+        low_temp = 0.1
         logits_low_temp = torch.div(logits, low_temp)
 
         softmax = torch.nn.Softmax(dim=0)
@@ -170,7 +170,7 @@ def process(feature_extractor, loader, stage, images_info_stage):
 
             loop.set_postfix({"Accuracy": matches/count})
 
-            utils.save_pickle(pseudo_labels, f"{root_dir}/annotations/pseudo_labels_{stage}.pkl")
+            #utils.save_pickle(pseudo_labels, f"{root_dir}/annotations/pseudo_labels_{stage}.pkl")
         else:
             loop.set_postfix({"Error: ": "No image"})
 
@@ -178,6 +178,10 @@ if __name__ == "__main__":
 
     feature_extractor = FeatureExtractor()
     feature_extractor.to(device)
+
+    # SOFTKNN, HARDKNN
+
+    feature_extractor.eval()
 
     input_size = 224
     batch_size = 1

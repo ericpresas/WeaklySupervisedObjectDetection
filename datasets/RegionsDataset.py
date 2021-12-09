@@ -3,12 +3,11 @@ from PIL import Image
 import torch
 from torch.utils.data import Dataset
 import random
-import matplotlib.pyplot as plt
-# Ignore warnings
 import warnings
 warnings.filterwarnings("ignore")
-import time
+from utils import utils
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class RegionsDataset(Dataset):
@@ -34,7 +33,12 @@ class RegionsDataset(Dataset):
         #plt.show()
         cropped_images = []
 
-        for i, annotation in enumerate(image_info['edge_boxes'][:500]):
+        image_info['edge_boxes'] = list(utils.filter_boxes(np.array(image_info['edge_boxes']), 100, 500))
+
+        """if len(image_info['edge_boxes']) > 500:
+            image_info['edge_boxes'] = image_info['edge_boxes'][:500]"""
+
+        for i, annotation in enumerate(image_info['edge_boxes']):
 
             x, y, w, h = annotation
             #cropped_image = img[y:y+h, x:x+w]
