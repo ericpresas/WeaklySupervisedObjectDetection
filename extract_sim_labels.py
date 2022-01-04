@@ -160,6 +160,7 @@ def process(feature_extractor, loader, stage, images_info_stage):
             pseudo_labels.append({
                 "pseudo_label_id": pseudo_label_cat['id'],
                 "pseudo_label": pseudo_label_oneHot,
+                "sim_logits": logits,
                 "id": img_obj['id'],
                 "categories": list(categories_image),
                 "path": img_obj['path']
@@ -202,10 +203,10 @@ if __name__ == "__main__":
         x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, shuffle=True, num_workers=0) for x in
         ['train', 'val']}
 
-    print("Start train Pseudo Labels extractor...")
-    process(feature_extractor, dataloaders_dict['train'], 'train', images_info_train)
-    #print("Start val Pseudo Labels extractor...")
-    #process(feature_extractor, dataloaders_dict['val'], 'val', images_info_val)
+    #print("Start train Pseudo Labels extractor...")
+    #process(feature_extractor, dataloaders_dict['train'], 'train', images_info_train)
+    print("Start val Pseudo Labels extractor...")
+    process(feature_extractor, dataloaders_dict['val'], 'val', images_info_val)
 
 
 
