@@ -5,7 +5,7 @@ from models import Teacher
 from datasets import RegionsDataset
 from tqdm import tqdm
 device = ("cuda" if torch.cuda.is_available() else "cpu")
-from utils import utils, apmeter
+from utils import utils, APMeter
 import numpy as np
 import torch.nn as nn
 from pycocotools.coco import COCO
@@ -15,8 +15,9 @@ torch.cuda.empty_cache()
 
 print(f"Using {device}...")
 
-stage = 'train'
+stage = 'val'
 
+apmeter = APMeter()
 root_dir = 'data/coco'
 root_dir_results = '/mnt/gpid08/users/eric.presas'
 checkpoint_path = 'outputs/model-2021-12-01_19:49:46.pt'
@@ -61,6 +62,8 @@ def print_stats(average_precision):
     for i, category in enumerate(categories_ids):
         print(f"{category['name']}: {array_precision[i]}")
 
+    print(f"All: {np.mean(array_precision)}")
+
 
 def process(teacher_model, loader, stage, images_info_stage, pseudo_labels):
     loop = tqdm(loader, unit=" batches", bar_format="{l_bar}{bar:10}{r_bar}{bar:-10b}")  # For printing the progress bar
@@ -96,10 +99,12 @@ def process(teacher_model, loader, stage, images_info_stage, pseudo_labels):
                             comb_preds = torch.stack(comb_preds)
                             comb_preds = torch.mean(comb_preds, dim=0)
 
+                            thr_preds = from_preds_to_categories(comb_preds, treshold=0.8)
+
                             stage_preds.append({
                                 "id": img_obj['id'],
                                 "path": img_obj['path'],
-                                "categories_preds": from_preds_to_categories(comb_preds, treshold=0.1)
+                                "categories_preds": thr_preds
                             })
 
                             ground_truth = torch.unsqueeze(extract_gt(sim_obj['categories']), dim=0)
@@ -108,8 +113,8 @@ def process(teacher_model, loader, stage, images_info_stage, pseudo_labels):
                             if count % 10 == 0:
                                 average_precision = apmeter.value()
                                 print_stats(average_precision)
-                                utils.save_pickle(stage_preds,
-                                                  f"{root_dir_results}/annotations_NSOD/teacher_predictions{stage}.pkl")
+                                """utils.save_pickle(stage_preds,
+                                                  f"{root_dir_results}/annotations_NSOD/teacher_predictions{stage}.pkl")"""
                         except Exception as e:
                             print('Error')
                             print(e)
@@ -141,4 +146,7 @@ if __name__ == "__main__":
 
     print(f"Start {stage} Multiclass Labels extractor...")
     process(teacher_model, dataloader, stage, images_info, pseudo_labels)
+
+    average_precision = apmeter.value()
+    print_stats(average_precision)
 
